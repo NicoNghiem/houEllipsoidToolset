@@ -3,6 +3,10 @@
 
 #include <metric.h>
 
+/*
+Struct to describe an ellipsoid
+*/
+
 struct ellipsoid
 {
     metric Q;
@@ -18,6 +22,26 @@ struct ellipsoid
     metric getMetric()
     {
         return this.Q;
+    }
+
+    matrix3 getTensor()
+    {
+        return this.Q->getTensor();
+    }
+
+    matrix3 getInverseTensor()
+    {
+        return this.Q->getInverseTensor();
+    }
+
+    matrix3 getSqrtTensor()
+    {
+        return this.Q->getSqrtTensor();
+    }
+
+    matrix3 getInverseSqrtTensor()
+    {
+        return this.Q->getInverseSqrtTensor();
     }
 
     // set methods
@@ -53,8 +77,7 @@ struct ellipsoid
     // Evaluate the outer shell of the Ellipsoid in the direction dir
     vector evaluateP(const vector dir)
     {
-        matrix3 R = Q->getInverseSqrtTensor();
-        return this->getCenter() + R * dir;
+        return this->getCenter() + (1. / norm(this->getMetric(), dir)) * dir;
     }
 
     // Evaluates the Normal of the Ellipsoid along the direction dir
@@ -108,40 +131,27 @@ function ellipsoid ellipsoidFromMatrixCenter(const matrix3 Q; const vector cente
     return ellipsoidFromMetricCenter(M,center);
 }
 
-// --------------------
-// ----- Methods ------
-// --------------------
+// Set methods
 
-// Ellipsoidal Calculus
-
-// Return the Ellipsoid that approximates the Minkowski Sum of E0 and E1
-function ellipsoid minkowskiExternalApproximator(const ellipsoid E0, E1)
+// Set the point to become a container for the ellipsoid
+function void setEllipsoid(int geo,pt; ellipsoid E)
 {
-    vector diff = E1->getCenter() - E0->getCenter();
-    vector dir = normalize(diff);
-
-    metric M0 = E0->getMetric();
-    metric M1 = E1->getMetric();
-    
-    matrix3 Q0 = M0->getInverseTensor();
-    matrix3 Q1 = M1->getInverseTensor();
-    
-    float l0 = sqrt(dot(dir, Q0*dir));
-    float l1 = sqrt(dot(dir, Q1*dir));
-    matrix3 Qstar = invert((l0+l1) * (1./l0 * Q0 + 1./l1 * Q1));
-    metric Mstar = metricFromMatrix(Qstar);
-    vector origin = {0.,0.,0.};
-    return ellipsoidFromMetricCenter(Mstar, origin);
+    vector P = E->getCenter();
+    matrix3 T = E->getInverseTensor();
+    vector scale;
+    matrix3 R = diagonalizesymmetric(T, scale);
+    vector4 orient = quaternion(R);
+    setpointattrib(geo, 'P', pt, P);
+    setpointattrib(geo, 'orient', pt, orient);
+    setpointattrib(geo,'scale',pt,sqrt(scale));
 }
 
-// Utils
-
-// Intersection Methods
-
-// Returns if E0 and E1 collide 
-function int collide(const ellipsoid E0, E1 ; vector displacement)
+// Add an ellipsoid to the geometry
+function int addEllipsoid(int geo; ellipsoid E)
 {
-
+    int pt = addpoint(geo, 0);
+    setEllipsoid(geo,pt,E);
+    return pt;
 }
 
 #endif
