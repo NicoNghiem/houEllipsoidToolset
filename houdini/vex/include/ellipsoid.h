@@ -154,4 +154,13 @@ function int addEllipsoid(int geo; ellipsoid E)
     return pt;
 }
 
+function int addPrimEllipsoid(int geo; ellipsoid E)
+{
+    int pt = addEllipsoid(geo, E);
+    int prim = addprim(0,'sphere',pt);
+    matrix3 transform = E->getInverseSqrtTensor();
+    setprimintrinsic(geo,'transform',prim,transform);
+    return prim;
+}
+
 #endif
